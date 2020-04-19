@@ -1,11 +1,15 @@
 import unittest
 import os
 
+#for testing in local mashine
+import sys
+sys.path.append('../')
+
 from bitrix24 import Bitrix24
 
-
 class Bitrix24Test(unittest.TestCase):
-    code = os.environ.get('TEST_WEBHOOK_CODE')
+    domain = os.environ.get('TEST_DOMAIN', "your-domain.bitrix24.ru")
+    code = os.environ.get('TEST_WEBHOOK_CODE', "******************")
     user_id = os.environ.get('TEST_USER_ID', 1)
     event = 'OnAppUpdate'
     handler = 'https://example.com/'
@@ -55,6 +59,30 @@ class Bitrix24Test(unittest.TestCase):
         self.assertNotIn('error', result)
 
     def test_call_webhook(self):
-        result = self.bx24.call_method('profile', self.code)
+        bx24hook = Bitrix24(self.domain, user_id=1)
+        result = bx24hook.call_method('user.current', self.code)
         self.assertIsInstance(result, dict)
         self.assertNotIn('error', result)
+
+    def test_call_batch_webhook(self):
+        bx24hook = Bitrix24(self.domain, user_id=1)
+        calls = {
+            'get_user': ('user.current', {}),
+            'get_product_760': {
+                'method': 'crm.product.get',
+                'params': {'ID': 760}
+            },
+            'get_product_764': {
+                'method': 'crm.product.get',
+                'params': {'ID': 764}
+            }
+        }
+       
+        result = bx24hook.call_batch_webhook(calls, self.code, True)
+        self.assertIsInstance(result, dict)
+        self.assertNotEqual(result['result'], {})
+        self.assertListEqual(result['result']['result_error'], [])
+
+
+if __name__ == "__main__":
+    unittest.main()
